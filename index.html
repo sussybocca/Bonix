@@ -30,9 +30,6 @@
     /* --- Output --- */
     .output { background: #fff; padding: 1rem 1.5rem; border-radius: 0.75rem; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-top: 1.5rem; white-space: pre-wrap; }
 
-    /* --- Links --- */
-    .link-btn { display: inline-block; margin-top: 1rem; color: #3b82f6; cursor: pointer; text-decoration: underline; }
-
     /* --- Responsive --- */
     @media (max-width: 600px) {
       header h1 { font-size: 2rem; }
@@ -58,26 +55,21 @@
     </div>
 
     <button onclick="runModel()">Run Model</button>
-    <div class="link-btn" onclick="openEmbedPage()">Go to Embed Page</div>
 
     <div class="output" id="output">Output will appear here...</div>
   </div>
 
   <script>
     async function loadModels() {
-      try {
-        const res = await fetch('/api/list_models');
-        const models = await res.json();
-        const select = document.getElementById('model');
-        models.forEach(m => {
-          const opt = document.createElement('option');
-          opt.value = JSON.stringify(m);
-          opt.textContent = m.model + (m.is_space ? " (Space)" : "");
-          select.appendChild(opt);
-        });
-      } catch (err) {
-        document.getElementById('output').textContent = "Error loading models: " + err;
-      }
+      const res = await fetch('/api/list_models');
+      const models = await res.json();
+      const select = document.getElementById('model');
+      models.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = JSON.stringify(m);
+        opt.textContent = m.model;
+        select.appendChild(opt);
+      });
     }
 
     async function runModel() {
@@ -95,16 +87,11 @@
           body: JSON.stringify({ model: data.model, api_key: data.api_key, input })
         });
         const json = await res.json();
-        if (json.output) outputEl.textContent = typeof json.output === "string" ? json.output : JSON.stringify(json.output, null, 2);
+        if (json.output) outputEl.textContent = json.output;
         else outputEl.textContent = JSON.stringify(json, null, 2);
       } catch (err) {
         outputEl.textContent = "Error: " + err;
       }
-    }
-
-    function openEmbedPage() {
-      // Opens the embed page where users can add their own models
-      window.location.href = '/embed.html';
     }
 
     loadModels();
