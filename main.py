@@ -16,18 +16,16 @@ if not HF_API_TOKEN:
     raise RuntimeError("HF_API_TOKEN not set! Please add it to .env (local) or Railway secrets.")
 
 # --------------------------------------------------------------------
-# Models info: key + type
+# Models info: key + type + is_space
 # --------------------------------------------------------------------
 MODEL_INFO = {
     # Old chat models
-    "meta-llama/Llama-3.1-8B-Instruct": {"api_key": "Llama3#rx5$tkadDl45%", "type": "chat"},
-    "deepseek-ai/DeepSeek-V3-0324": {"api_key": "DeepSeek#rx5$tkadDl45%", "type": "chat"},
-    "cognitivecomputations/dolphin-2.9.1": {"api_key": "Dolphin#rx5$tkadDl45%", "type": "chat"},
+    "meta-llama/Llama-3.1-8B-Instruct": {"api_key": "Llama3#rx5$tkadDl45%", "type": "chat", "is_space": False},
+    "deepseek-ai/DeepSeek-V3-0324": {"api_key": "DeepSeek#rx5$tkadDl45%", "type": "chat", "is_space": False},
+    "cognitivecomputations/dolphin-2.9.1": {"api_key": "Dolphin#rx5$tkadDl45%", "type": "chat", "is_space": False},
 
-    # New text-generation models
-    "vngrs-ai/Kumru-2B": {"api_key": "Kumru#rx5$tkadDl45%", "type": "text"},
-    "opendatalab/MinerU2.5-2509-1.2B": {"api_key": "Miner#rx5$tkadDl45%", "type": "text"},
-    "deepseek-ai/DeepSeek-V3.2-Exp": {"api_key": "DeepSeekExp#rx5$tkadDl45%", "type": "text"},
+    # New model added
+    "deepseek-ai/DeepSeek-V3.2-Exp": {"api_key": "DeepSeekExp#rx5$tkadDl45%", "type": "text", "is_space": False},
 }
 
 # --------------------------------------------------------------------
@@ -65,9 +63,10 @@ async def run_model(req: RunModelRequest):
 
     model_data = MODEL_INFO[req.model]
     model_type = model_data["type"]
+    is_space = model_data["is_space"]
 
-    if model_type == "chat":
-        # Chat models via Hugging Face Chat endpoint
+    if model_type == "chat" and not is_space:
+        # Chat LLMs via Hugging Face Chat endpoint
         payload = {
             "model": req.model,
             "messages": [{"role": "user", "content": req.input}],
@@ -75,7 +74,7 @@ async def run_model(req: RunModelRequest):
         }
         endpoint = HF_CHAT_URL
     else:
-        # Text-generation models via standard inference API
+        # Text-generation models (non-chat)
         payload = {"inputs": req.input}
         endpoint = f"https://api-inference.huggingface.co/models/{req.model}"
 
@@ -84,16 +83,14 @@ async def run_model(req: RunModelRequest):
         response.raise_for_status()
         result = response.json()
 
-        if model_type == "chat":
+        if model_type == "chat" and not is_space:
             output = result["choices"][0]["message"]["content"]
         else:
-            # For text models, return the raw response
+            # Return the response directly for text models
             output = result
 
         return {"output": output}
 
-    except requests.exceptions.HTTPError as http_err:
-        raise HTTPException(status_code=response.status_code, detail=f"Inference failed: {response.text}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Inference failed: {e}")
 
@@ -103,7 +100,7 @@ async def run_model(req: RunModelRequest):
 @app.get("/api/list_models")
 async def list_models():
     return [
-        {"model": m, "api_key": MODEL_INFO[m]["api_key"], "type": MODEL_INFO[m]["type"]}
+        {"model": m, "api_key": MODEL_INFO[m]["api_key"], "type": MODEL_INFO[m]["type"], "is_space": MODEL_INFO[m]["is_space"]}
         for m in MODEL_INFO.keys()
     ]
 
