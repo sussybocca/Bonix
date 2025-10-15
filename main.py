@@ -7,9 +7,13 @@ from dotenv import load_dotenv
 # --------------------------------------------------------------------
 # Load environment variables
 # --------------------------------------------------------------------
+# Only loads .env locally; on Railway, environment variables are injected automatically
 load_dotenv()
 HF_API_TOKEN = os.getenv("HF_API_TOKEN")
 HF_CHAT_URL = "https://router.huggingface.co/v1/chat/completions"
+
+if not HF_API_TOKEN:
+    raise RuntimeError("HF_API_TOKEN not set! Please add it to .env (local) or Railway secrets.")
 
 # --------------------------------------------------------------------
 # Models and API keys
