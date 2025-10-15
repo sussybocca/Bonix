@@ -1,23 +1,73 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Embed AI Models</title>
-    <script src="embed.js" defer></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bonix AI Hub - Embed AI Models</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; background: #f5f7fa; padding: 2rem; }
+    select, textarea { width: 100%; padding: 0.8rem; margin-bottom: 1rem; border-radius: 0.5rem; border: 1px solid #d1d5db; }
+    button { padding: 0.8rem 1.5rem; background: #3b82f6; color: #fff; border: none; border-radius: 0.5rem; cursor: pointer; }
+    button:hover { background: #2563eb; }
+    .output { margin-top: 1rem; padding: 1rem; background: #fff; border-radius: 0.5rem; box-shadow: 0 2px 10px rgba(0,0,0,0.05); white-space: pre-wrap; }
+  </style>
 </head>
 <body>
-    <h1>Embed Your AI Model</h1>
+  <h1>Embed AI Model</h1>
+  <p>Select a model and run your prompt instantly using your custom API key.</p>
 
-    <h3>Model Name (HuggingFace):</h3>
-    <input type="text" id="modelName">
+  <select id="model"></select>
+  <textarea id="input" placeholder="Type your prompt here..."></textarea>
+  <button onclick="runModel()">Run Model</button>
 
-    <h3>Custom API Key:</h3>
-    <input type="text" id="customApiKey">
+  <div class="output" id="output">Output will appear here...</div>
 
-    <button id="setupKeyBtn">Setup API Key</button>
+  <script>
+    const CUSTOM_API_KEYS = {
+      "meta-llama/Llama-3.1-8B-Instruct": "Llama3#rx5$tkadDl45%",
+      "deepseek-ai/DeepSeek-V3-0324": "DeepSeek#rx5$tkadDl45%",
+      "cognitivecomputations/dolphin-2.9.1": "Dolphin#rx5$tkadDl45%",
+      "vngrs-ai/Kumru-2B": "Kumru#rx5$tkadDl45%",
+      "opendatalab/MinerU2.5-2509-1.2B": "Miner#rx5$tkadDl45%",
+      "deepseek-ai/DeepSeek-R1": "DeepSeekR1#rx5$tkadDl45%"
+    };
 
-    <pre id="status"></pre>
+    async function loadModels() {
+      const res = await fetch('/api/list_models');
+      const models = await res.json();
+      const select = document.getElementById('model');
+      models.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.model;
+        opt.textContent = m.model;
+        select.appendChild(opt);
+      });
+    }
 
-    <a href="index.html">Back Home</a>
+    async function runModel() {
+      const modelName = document.getElementById('model').value;
+      const input = document.getElementById('input').value.trim();
+      if (!input) return alert("Please enter a prompt!");
+
+      const api_key = CUSTOM_API_KEYS[modelName];
+      const outputEl = document.getElementById('output');
+      outputEl.textContent = "Running model...";
+
+      try {
+        const res = await fetch('/api/run_model', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: modelName, api_key, input })
+        });
+        const json = await res.json();
+        outputEl.textContent = json.output || JSON.stringify(json, null, 2);
+      } catch (err) {
+        outputEl.textContent = "Error: " + err;
+      }
+    }
+
+    loadModels();
+  </script>
 </body>
 </html>
