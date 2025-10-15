@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException 
+from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import os, requests
@@ -16,19 +16,19 @@ if not HF_API_TOKEN:
     raise RuntimeError("HF_API_TOKEN not set! Please add it to .env (local) or Railway secrets.")
 
 # --------------------------------------------------------------------
-# Models and API keys
+# Models info: key + type
 # --------------------------------------------------------------------
-MODEL_KEYS = {
-    # Old models
-    "meta-llama/Llama-3.1-8B-Instruct": "Llama3#rx5$tkadDl45%",
-    "deepseek-ai/DeepSeek-V3-0324": "DeepSeek#rx5$tkadDl45%",
-    "cognitivecomputations/dolphin-2.9.1": "Dolphin#rx5$tkadDl45%",
-    
-    # New models for Beta 1.2
-    "emoji-gemma": "Emoji#rx5$tkadDl45%",
-    "arena": "Arena#rx5$tkadDl45%",
-    "Fathom-Search-4B": "Fathom#rx5$tkadDl45%",
-    "Ziya-Coding-34B": "Ziya#rx5$tkadDl45%",
+MODEL_INFO = {
+    # Old chat models
+    "meta-llama/Llama-3.1-8B-Instruct": {"api_key": "Llama3#rx5$tkadDl45%", "type": "chat"},
+    "deepseek-ai/DeepSeek-V3-0324": {"api_key": "DeepSeek#rx5$tkadDl45%", "type": "chat"},
+    "cognitivecomputations/dolphin-2.9.1": {"api_key": "Dolphin#rx5$tkadDl45%", "type": "chat"},
+
+    # New Beta 1.2 models
+    "emoji-gemma": {"api_key": "Emoji#rx5$tkadDl45%", "type": "text"},  # plain text input
+    "arena": {"api_key": "Arena#rx5$tkadDl45%", "type": "text"},
+    "Fathom-Search-4B": {"api_key": "Fathom#rx5$tkadDl45%", "type": "text"},
+    "Ziya-Coding-34B": {"api_key": "Ziya#rx5$tkadDl45%", "type": "text"},
 }
 
 # --------------------------------------------------------------------
@@ -49,14 +49,14 @@ class RunModelRequest(BaseModel):
     api_key: str
 
 # --------------------------------------------------------------------
-# Run model (via Hugging Face Router)
+# Run model
 # --------------------------------------------------------------------
 @app.post("/api/run_model")
 async def run_model(req: RunModelRequest):
-    if req.model not in MODEL_KEYS:
+    if req.model not in MODEL_INFO:
         raise HTTPException(status_code=404, detail="Model not found")
 
-    if req.api_key != MODEL_KEYS[req.model]:
+    if req.api_key != MODEL_INFO[req.model]["api_key"]:
         raise HTTPException(status_code=401, detail="Invalid API key")
 
     headers = {
@@ -64,19 +64,32 @@ async def run_model(req: RunModelRequest):
         "Content-Type": "application/json"
     }
 
-    payload = {
-        "model": req.model,
-        "messages": [
-            {"role": "user", "content": req.input}
-        ],
-        "stream": False
-    }
+    model_type = MODEL_INFO[req.model]["type"]
+
+    if model_type == "chat":
+        # Chat LLMs
+        payload = {
+            "model": req.model,
+            "messages": [{"role": "user", "content": req.input}],
+            "stream": False
+        }
+        endpoint = HF_CHAT_URL
+    else:
+        # Non-chat models (text, search, code, etc.)
+        payload = {"inputs": req.input}
+        endpoint = f"https://api-inference.huggingface.co/models/{req.model}"
 
     try:
-        response = requests.post(HF_CHAT_URL, headers=headers, json=payload)
+        response = requests.post(endpoint, headers=headers, json=payload)
         response.raise_for_status()
         result = response.json()
-        output = result["choices"][0]["message"]["content"]
+
+        if model_type == "chat":
+            output = result["choices"][0]["message"]["content"]
+        else:
+            # For non-chat models, just return the JSON result directly
+            output = result
+
         return {"output": output}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Inference failed: {e}")
@@ -86,7 +99,7 @@ async def run_model(req: RunModelRequest):
 # --------------------------------------------------------------------
 @app.get("/api/list_models")
 async def list_models():
-    return [{"model": m, "api_key": MODEL_KEYS[m]} for m in MODEL_KEYS.keys()]
+    return [{"model": m, "api_key": MODEL_INFO[m]["api_key"], "type": MODEL_INFO[m]["type"]} for m in MODEL_INFO.keys()]
 
 # --------------------------------------------------------------------
 # Run locally
