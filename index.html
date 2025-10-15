@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bonix AI Hub</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* --- Reset & base --- */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #f5f7fa; color: #111; line-height: 1.6; }
+
+    /* --- Container --- */
+    .container { max-width: 900px; margin: 3rem auto; padding: 1rem; }
+
+    /* --- Header --- */
+    header { text-align: center; margin-bottom: 2rem; }
+    header h1 { font-size: 2.5rem; font-weight: 700; color: #1f2937; margin-bottom: 0.3rem; }
+    header p { font-size: 1rem; color: #4b5563; }
+
+    /* --- Form --- */
+    .form-group { display: flex; flex-direction: column; margin-bottom: 1rem; }
+    select, textarea { padding: 0.8rem; border-radius: 0.5rem; border: 1px solid #d1d5db; font-size: 1rem; width: 100%; }
+    select:focus, textarea:focus { outline: none; border-color: #3b82f6; box-shadow: 0 0 0 2px rgba(59,130,246,0.2); }
+
+    /* --- Buttons --- */
+    button { background: #3b82f6; color: #fff; padding: 0.8rem 1.5rem; font-size: 1rem; font-weight: 600; border: none; border-radius: 0.5rem; cursor: pointer; transition: all 0.2s ease; }
+    button:hover { background: #2563eb; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+
+    /* --- Output --- */
+    .output { background: #fff; padding: 1rem 1.5rem; border-radius: 0.75rem; box-shadow: 0 2px 10px rgba(0,0,0,0.05); margin-top: 1.5rem; white-space: pre-wrap; }
+
+    /* --- Responsive --- */
+    @media (max-width: 600px) {
+      header h1 { font-size: 2rem; }
+      button { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Bonix AI Hub</h1>
+      <p>Test and embed multiple AI models with one platform.</p>
+    </header>
+
+    <div class="form-group">
+      <label for="model">Select AI Model:</label>
+      <select id="model"></select>
+    </div>
+
+    <div class="form-group">
+      <label for="input">Your Prompt:</label>
+      <textarea id="input" placeholder="Type your prompt here..."></textarea>
+    </div>
+
+    <button onclick="runModel()">Run Model</button>
+
+    <div class="output" id="output">Output will appear here...</div>
+  </div>
+
+  <script>
+    async function loadModels() {
+      const res = await fetch('/api/list_models');
+      const models = await res.json();
+      const select = document.getElementById('model');
+      models.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = JSON.stringify(m);
+        opt.textContent = m.model;
+        select.appendChild(opt);
+      });
+    }
+
+    async function runModel() {
+      const data = JSON.parse(document.getElementById('model').value);
+      const input = document.getElementById('input').value.trim();
+      if (!input) return alert("Please enter a prompt!");
+
+      const outputEl = document.getElementById('output');
+      outputEl.textContent = "Running model...";
+
+      try {
+        const res = await fetch('/api/run_model', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model: data.model, api_key: data.api_key, input })
+        });
+        const json = await res.json();
+        if (json.output) outputEl.textContent = json.output;
+        else outputEl.textContent = JSON.stringify(json, null, 2);
+      } catch (err) {
+        outputEl.textContent = "Error: " + err;
+      }
+    }
+
+    loadModels();
+  </script>
+</body>
+</html>
