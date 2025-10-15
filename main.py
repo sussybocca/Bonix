@@ -16,19 +16,19 @@ if not HF_API_TOKEN:
     raise RuntimeError("HF_API_TOKEN not set! Please add it to .env (local) or Railway secrets.")
 
 # --------------------------------------------------------------------
-# Models info: key + type
+# Models info: key + type + is_space
 # --------------------------------------------------------------------
 MODEL_INFO = {
     # Old chat models
-    "meta-llama/Llama-3.1-8B-Instruct": {"api_key": "Llama3#rx5$tkadDl45%", "type": "chat"},
-    "deepseek-ai/DeepSeek-V3-0324": {"api_key": "DeepSeek#rx5$tkadDl45%", "type": "chat"},
-    "cognitivecomputations/dolphin-2.9.1": {"api_key": "Dolphin#rx5$tkadDl45%", "type": "chat"},
+    "meta-llama/Llama-3.1-8B-Instruct": {"api_key": "Llama3#rx5$tkadDl45%", "type": "chat", "is_space": False},
+    "deepseek-ai/DeepSeek-V3-0324": {"api_key": "DeepSeek#rx5$tkadDl45%", "type": "chat", "is_space": False},
+    "cognitivecomputations/dolphin-2.9.1": {"api_key": "Dolphin#rx5$tkadDl45%", "type": "chat", "is_space": False},
 
     # New Beta 1.2 models
-    "emoji-gemma": {"api_key": "Emoji#rx5$tkadDl45%", "type": "text"},  # plain text input
-    "arena": {"api_key": "Arena#rx5$tkadDl45%", "type": "text"},
-    "Fathom-Search-4B": {"api_key": "Fathom#rx5$tkadDl45%", "type": "text"},
-    "Ziya-Coding-34B": {"api_key": "Ziya#rx5$tkadDl45%", "type": "text"},
+    "google/emoji-gemma": {"api_key": "Emoji#rx5$tkadDl45%", "type": "text", "is_space": True},
+    "bigcode/arena": {"api_key": "Arena#rx5$tkadDl45%", "type": "text", "is_space": False},
+    "FractalAIResearch/Fathom-Search-4B": {"api_key": "Fathom#rx5$tkadDl45%", "type": "text", "is_space": False},
+    "TheBloke/Ziya-Coding-34B-v1.0-AWQ": {"api_key": "Ziya#rx5$tkadDl45%", "type": "text", "is_space": False},
 }
 
 # --------------------------------------------------------------------
@@ -64,10 +64,12 @@ async def run_model(req: RunModelRequest):
         "Content-Type": "application/json"
     }
 
-    model_type = MODEL_INFO[req.model]["type"]
+    model_data = MODEL_INFO[req.model]
+    model_type = model_data["type"]
+    is_space = model_data["is_space"]
 
-    if model_type == "chat":
-        # Chat LLMs
+    if model_type == "chat" and not is_space:
+        # Chat LLMs via Hugging Face Chat endpoint
         payload = {
             "model": req.model,
             "messages": [{"role": "user", "content": req.input}],
@@ -75,22 +77,29 @@ async def run_model(req: RunModelRequest):
         }
         endpoint = HF_CHAT_URL
     else:
-        # Non-chat models (text, search, code, etc.)
+        # Regular model or Space
         payload = {"inputs": req.input}
-        endpoint = f"https://api-inference.huggingface.co/models/{req.model}"
+        if is_space:
+            # Spaces use the spaces API endpoint
+            endpoint = f"https://hf.space/embed/{req.model}/api/predict/"
+        else:
+            endpoint = f"https://api-inference.huggingface.co/models/{req.model}"
 
     try:
         response = requests.post(endpoint, headers=headers, json=payload)
         response.raise_for_status()
         result = response.json()
 
-        if model_type == "chat":
+        if model_type == "chat" and not is_space:
             output = result["choices"][0]["message"]["content"]
+        elif is_space:
+            # Spaces often return {"data": [...]}, handle generic response
+            output = result.get("data", result)
         else:
-            # For non-chat models, just return the JSON result directly
             output = result
 
         return {"output": output}
+
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Inference failed: {e}")
 
@@ -99,7 +108,10 @@ async def run_model(req: RunModelRequest):
 # --------------------------------------------------------------------
 @app.get("/api/list_models")
 async def list_models():
-    return [{"model": m, "api_key": MODEL_INFO[m]["api_key"], "type": MODEL_INFO[m]["type"]} for m in MODEL_INFO.keys()]
+    return [
+        {"model": m, "api_key": MODEL_INFO[m]["api_key"], "type": MODEL_INFO[m]["type"], "is_space": MODEL_INFO[m]["is_space"]}
+        for m in MODEL_INFO.keys()
+    ]
 
 # --------------------------------------------------------------------
 # Run locally
