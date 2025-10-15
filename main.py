@@ -7,7 +7,6 @@ from dotenv import load_dotenv
 # --------------------------------------------------------------------
 # Load environment variables
 # --------------------------------------------------------------------
-# Only loads .env locally; on Railway, environment variables are injected automatically
 load_dotenv()
 HF_API_TOKEN = os.getenv("HF_API_TOKEN")
 HF_CHAT_URL = "https://router.huggingface.co/v1/chat/completions"
@@ -24,14 +23,14 @@ MODEL_INFO = {
     "deepseek-ai/DeepSeek-V3-0324": {"api_key": "DeepSeek#rx5$tkadDl45%", "type": "chat", "is_space": False},
     "cognitivecomputations/dolphin-2.9.1": {"api_key": "Dolphin#rx5$tkadDl45%", "type": "chat", "is_space": False},
 
-    # New model added
-    "deepseek-ai/DeepSeek-V3.2-Exp": {"api_key": "DeepSeekExp#rx5$tkadDl45%", "type": "text", "is_space": False},
+    # New chat-capable model
+    "deepseek-ai/DeepSeek-R1": {"api_key": "DeepSeekR1#rx5$tkadDl45%", "type": "chat", "is_space": False},
 }
 
 # --------------------------------------------------------------------
 # FastAPI app
 # --------------------------------------------------------------------
-app = FastAPI(title="Bonix API - Inference Providers")
+app = FastAPI(title="Bonix AI Hub - Inference Providers")
 
 @app.get("/")
 async def root():
@@ -66,7 +65,6 @@ async def run_model(req: RunModelRequest):
     is_space = model_data["is_space"]
 
     if model_type == "chat" and not is_space:
-        # Chat LLMs via Hugging Face Chat endpoint
         payload = {
             "model": req.model,
             "messages": [{"role": "user", "content": req.input}],
@@ -74,9 +72,11 @@ async def run_model(req: RunModelRequest):
         }
         endpoint = HF_CHAT_URL
     else:
-        # Text-generation models (non-chat)
         payload = {"inputs": req.input}
-        endpoint = f"https://api-inference.huggingface.co/models/{req.model}"
+        if is_space:
+            endpoint = f"https://hf.space/embed/{req.model}/api/predict/"
+        else:
+            endpoint = f"https://api-inference.huggingface.co/models/{req.model}"
 
     try:
         response = requests.post(endpoint, headers=headers, json=payload)
@@ -85,8 +85,9 @@ async def run_model(req: RunModelRequest):
 
         if model_type == "chat" and not is_space:
             output = result["choices"][0]["message"]["content"]
+        elif is_space:
+            output = result.get("data", result)
         else:
-            # Return the response directly for text models
             output = result
 
         return {"output": output}
