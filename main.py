@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException 
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 import os, requests
@@ -19,9 +19,16 @@ if not HF_API_TOKEN:
 # Models and API keys
 # --------------------------------------------------------------------
 MODEL_KEYS = {
+    # Old models
     "meta-llama/Llama-3.1-8B-Instruct": "Llama3#rx5$tkadDl45%",
     "deepseek-ai/DeepSeek-V3-0324": "DeepSeek#rx5$tkadDl45%",
-    "cognitivecomputations/dolphin-2.9.1": "Dolphin#rx5$tkadDl45%"
+    "cognitivecomputations/dolphin-2.9.1": "Dolphin#rx5$tkadDl45%",
+    
+    # New models for Beta 1.2
+    "emoji-gemma": "Emoji#rx5$tkadDl45%",
+    "arena": "Arena#rx5$tkadDl45%",
+    "Fathom-Search-4B": "Fathom#rx5$tkadDl45%",
+    "Ziya-Coding-34B": "Ziya#rx5$tkadDl45%",
 }
 
 # --------------------------------------------------------------------
