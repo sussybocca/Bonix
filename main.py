@@ -24,11 +24,10 @@ MODEL_INFO = {
     "deepseek-ai/DeepSeek-V3-0324": {"api_key": "DeepSeek#rx5$tkadDl45%", "type": "chat", "is_space": False},
     "cognitivecomputations/dolphin-2.9.1": {"api_key": "Dolphin#rx5$tkadDl45%", "type": "chat", "is_space": False},
 
-    # New Beta 1.2 models
-    "google/emoji-gemma": {"api_key": "Emoji#rx5$tkadDl45%", "type": "text", "is_space": True},
-    "bigcode/arena": {"api_key": "Arena#rx5$tkadDl45%", "type": "text", "is_space": False},
-    "FractalAIResearch/Fathom-Search-4B": {"api_key": "Fathom#rx5$tkadDl45%", "type": "text", "is_space": False},
-    "TheBloke/Ziya-Coding-34B-v1.0-AWQ": {"api_key": "Ziya#rx5$tkadDl45%", "type": "text", "is_space": False},
+    # New models
+    "vngrs-ai/Kumru-2B": {"api_key": "Kumru#rx5$tkadDl45%", "type": "text", "is_space": False},
+    "opendatalab/MinerU2.5-2509-1.2B": {"api_key": "Miner#rx5$tkadDl45%", "type": "text", "is_space": False},
+    "deepseek-ai/DeepSeek-V3.2-Exp": {"api_key": "DeepSeekExp#rx5$tkadDl45%", "type": "text", "is_space": False},
 }
 
 # --------------------------------------------------------------------
